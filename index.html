@@ -53,54 +53,40 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const sendButton = document.getElementById('sendButton');
-        const audioInput = document.getElementById('audioInput');
+<script>
+    const socket = io();
+    const sendButton = document.getElementById('sendButton');
+    const audioInput = document.getElementById('audioInput');
 
-        sendButton.addEventListener('click', () => {
-            const file = audioInput.files[0];
-            if (!file) {
-                alert('Please select an audio file');
-                return;
-            }
+    sendButton.addEventListener('click', () => {
+        const file = audioInput.files[0];
+        if (!file) {
+            alert('Please select an audio file');
+            return;
+        }
 
-            const chunkSize = 1048576; 
-            const reader = new FileReader();
+        const reader = new FileReader();
 
-            reader.onload = event => {
-                const arrayBuffer = event.target.result;
-                const totalSize = arrayBuffer.byteLength;
-                let offset = 0;
+        reader.onload = event => {
+            const arrayBuffer = event.target.result;
+            socket.emit('audioStream', arrayBuffer);
+        };
 
-                const sendChunk = () => {
-                    if (offset < totalSize) {
-                        const chunk = arrayBuffer.slice(offset, offset + chunkSize);
-                        socket.emit('audioStream', new Uint8Array(chunk));
-                        offset += chunkSize;
-                        setTimeout(sendChunk, 0);
-                    } else {
-                        console.log('Audio transmission ended');
-                    }
-                };
+        reader.onerror = error => {
+            console.error('Error reading file:', error);
+        };
 
-                sendChunk();
-            };
+        reader.readAsArrayBuffer(file);
+    });
 
-            reader.onerror = error => {
-                console.error('Error reading file:', error);
-            };
+    socket.on('connect', () => {
+        console.log('Connected to server');
+    });
 
-            reader.readAsArrayBuffer(file);
-        });
-
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-        });
-    </script>
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+    });
+</script>
+    
 </body>
 </html>

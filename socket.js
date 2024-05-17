@@ -1,10 +1,13 @@
 const socketIO = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
+const path = require('path');
 
 module.exports = (server) => {
 
-    const io = socketIO(server);
+    const io = socketIO(server,{
+        maxHttpBufferSize: 30 * 1024 * 1024
+    });
 
     io.on('connection', (socket) => {
         socket.id = uuidv4();
@@ -20,9 +23,18 @@ module.exports = (server) => {
         });
 
         socket.on('audioStream', data => {
-            console.log("----------- Reciving from Socket ID : ",socket.id);
+
+            const audioDir = path.join(__dirname, 'audio');
+            if (!fs.existsSync(audioDir)) {
+                fs.mkdirSync(audioDir);
+            }
+
+            const filename = uuidv4() + '.wav';
+            const filepath = path.join(audioDir, filename);
+
+            console.log("----------- Reciving from Socket ID : ", socket.id);
             console.log('Receiving audio data started...');
-            fs.appendFileSync(uuidv4() + '.mp3', data);
+            fs.appendFileSync(filepath, data);
             console.log('Receiving audio data completed...');
         });
 
