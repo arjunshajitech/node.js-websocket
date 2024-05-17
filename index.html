@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.io Audio Stream</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+        }
+
+        button {
+            padding: 15px 30px;
+            background-color: #4caf50;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 200px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <input type="file" id="audioInput" accept="audio/*">
+        <button id="sendButton">Send Audio</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const sendButton = document.getElementById('sendButton');
+        const audioInput = document.getElementById('audioInput');
+
+        sendButton.addEventListener('click', () => {
+            const file = audioInput.files[0];
+            if (!file) {
+                alert('Please select an audio file');
+                return;
+            }
+
+            const chunkSize = 1048576; 
+            const reader = new FileReader();
+
+            reader.onload = event => {
+                const arrayBuffer = event.target.result;
+                const totalSize = arrayBuffer.byteLength;
+                let offset = 0;
+
+                const sendChunk = () => {
+                    if (offset < totalSize) {
+                        const chunk = arrayBuffer.slice(offset, offset + chunkSize);
+                        socket.emit('audioStream', new Uint8Array(chunk));
+                        offset += chunkSize;
+                        setTimeout(sendChunk, 0);
+                    } else {
+                        console.log('Audio transmission ended');
+                    }
+                };
+
+                sendChunk();
+            };
+
+            reader.onerror = error => {
+                console.error('Error reading file:', error);
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+    </script>
+</body>
+</html>
